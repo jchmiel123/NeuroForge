@@ -1,4 +1,5 @@
 __pycache__/
 *.pyc
 demos/process_model.json
+demos/creature_brain.json
 tests/_tmp_model.json

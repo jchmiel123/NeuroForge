@@ -169,12 +169,14 @@ class Layer:
         return input_grads
 
     def to_dict(self) -> dict:
+        # Fresh lists, not references: from_dict()/copy() must yield layers
+        # that can be mutated without corrupting this one.
         return {
             "input_size": self.input_size,
             "output_size": self.output_size,
             "activation": self.activation,
-            "weights": self.weights,
-            "biases": self.biases,
+            "weights": [row[:] for row in self.weights],
+            "biases": list(self.biases),
         }
 
     @classmethod
@@ -406,6 +408,46 @@ class Network:
             vals = [vals]
         names = self.output_names or [f"out_{i}" for i in range(self.output_size)]
         return dict(zip(names, vals))
+
+    # -- agent / evolution interface ------------------------------------------
+    # These bypass fit()/scalers entirely: an evolved brain never trains on
+    # a dataset, it just maps sensor readings to action scores.
+
+    def activate(self, inputs: list[float]) -> list[float]:
+        """Raw forward pass, no scaling. Feed pre-normalized sensor values."""
+        return self._forward_raw(list(map(float, inputs)))
+
+    def act(self, inputs: list[float]) -> int:
+        """Pick the action with the highest output score (discrete policy)."""
+        out = self.activate(inputs)
+        return max(range(len(out)), key=lambda i: out[i])
+
+    def copy(self) -> "Network":
+        """Deep copy with identical weights (a clone, not a sibling)."""
+        clone = Network(self.input_size, self.hidden_sizes, self.output_size,
+                        task=self.task, activation=self.activation,
+                        classes=self.classes, output_names=self.output_names)
+        clone.layers = [Layer.from_dict(l.to_dict()) for l in self.layers]
+        if self.in_scaler:
+            clone.in_scaler = Scaler.from_dict(self.in_scaler.to_dict())
+        if self.out_scaler:
+            clone.out_scaler = Scaler.from_dict(self.out_scaler.to_dict())
+        return clone
+
+    def mutate(self, rate: float = 0.1, scale: float = 0.3) -> "Network":
+        """Return a mutated copy: each weight/bias has `rate` chance of a
+        gaussian nudge of size `scale`. This is the entire 'learning'
+        mechanism of neuroevolution - no gradients, no calculus."""
+        child = self.copy()
+        for layer in child.layers:
+            for row in layer.weights:
+                for j in range(len(row)):
+                    if random.random() < rate:
+                        row[j] += random.gauss(0.0, scale)
+            for i in range(len(layer.biases)):
+                if random.random() < rate:
+                    layer.biases[i] += random.gauss(0.0, scale)
+        return child
 
     # -- persistence ----------------------------------------------------------
 

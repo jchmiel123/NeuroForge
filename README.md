@@ -35,11 +35,30 @@ label, confidence = net.predict(x)
 net.predict_proba(x)                        # {"walk": 0.1, "run": 0.85, ...}
 ```
 
+Evolve a brain instead of training it (games, controllers - anything you
+can score but can't label):
+
+```python
+from neuroforge import Evolution, Environment, run_episode
+
+class MyWorld(Environment):          # implement reset() and step(action)
+    ...
+
+evo = Evolution(inputs=4, hidden=[12], outputs=3, population=60)
+best, history = evo.run(lambda net: run_episode(MyWorld(), net),
+                        generations=35)
+best.act(sensor_values)              # -> action index
+best.save("brain.json")
+```
+
 ## Demos
 
 ```bash
-python demos/predict_process.py   # train on process data, ask what-if questions
-python tests/test_core.py         # XOR + regression + save/load self-tests
+python demos/predict_process.py     # train on process data, ask what-if questions
+python demos/creature_world.py      # evolve a food-hunting creature (ASCII world)
+python demos/creature_world.py --watch   # animate the best creature live
+python tests/test_core.py           # XOR + regression + save/load self-tests
+python tests/test_evolve.py         # evolution + mutation + brain persistence
 ```
 
 ## Why it learns when from-scratch attempts don't
@@ -58,8 +77,8 @@ Three things silently kill hand-rolled networks, all handled here:
 ## Roadmap
 
 - [x] Phase 1: supervised core (regression + classification), save/load, demos
-- [ ] Phase 2: `Environment` interface + neuroevolution trainer (game creatures
-      that learn by mutation/selection - no gradients needed)
+- [x] Phase 2: `Environment` interface + neuroevolution trainer + creature demo
+      (evolved hunter eats 10/10 food on unseen maps; random baseline eats 0)
 - [ ] Phase 3: Q-learning decision agents (learn from delayed rewards)
 - [ ] Phase 4: NumPy fast path, QueueForge `neural_train` offload,
       network visualizer (port from PixelForge)

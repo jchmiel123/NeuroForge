@@ -5,10 +5,16 @@ ASCII-only output everywhere.
 
 ## Layout
 
-- `neuroforge/core.py` - Layer, Network, Scaler. The entire Phase 1 engine.
-- `tests/test_core.py` - self-tests (XOR, nonlinear regression, save/load).
-  Run after ANY change to core: `python tests/test_core.py`
+- `neuroforge/core.py` - Layer, Network, Scaler. Phase 1 engine + the
+  agent interface (activate/act/copy/mutate) used by evolution.
+- `neuroforge/evolve.py` - Environment interface, run_episode, Evolution
+  trainer (elitism + mutation + fresh blood). Phase 3 Q-learning will
+  reuse Environment.
+- `tests/test_core.py`, `tests/test_evolve.py` - run BOTH after any
+  change to core: `python tests/test_core.py && python tests/test_evolve.py`
 - `demos/predict_process.py` - input->output prediction + what-if sweeps.
+- `demos/creature_world.py` - evolved food-hunter in an ASCII world
+  (`--watch` animates, `--fast` for quick smoke runs).
 
 ## Design rules
 
@@ -22,6 +28,10 @@ ASCII-only output everywhere.
    training must serialize in `save()` and restore in `load()`, and the
    round-trip test must stay exact.
 4. **Models are JSON.** Human-inspectable, diffable, no pickle.
+5. **No aliased weights.** `Layer.to_dict()` MUST return fresh lists -
+   copy()/mutate() rely on it. Sharing references between clones corrupts
+   elites during evolution (bug found and fixed 2026-07-03; the
+   monotonicity of `history["best"]` in test_evolve is the canary).
 
 ## Relationship to other CodeLab projects
 
