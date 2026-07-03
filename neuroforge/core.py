@@ -434,6 +434,17 @@ class Network:
             clone.out_scaler = Scaler.from_dict(self.out_scaler.to_dict())
         return clone
 
+    def train_on(self, inputs: list[float], targets: list[float],
+                 lr: float = 0.01) -> float:
+        """One raw gradient step toward `targets`, no scaling. This is the
+        incremental-learning hook Q-learning uses: the 'dataset' is invented
+        one experience at a time, so fit()'s whole-dataset scalers don't
+        apply. Regression-task networks only. Returns the sample loss."""
+        if self.task != "regression":
+            raise RuntimeError("train_on() requires task='regression'")
+        out = self._forward_raw(list(map(float, inputs)))
+        return self._loss_and_backward(out, list(map(float, targets)), lr)
+
     def mutate(self, rate: float = 0.1, scale: float = 0.3) -> "Network":
         """Return a mutated copy: each weight/bias has `rate` chance of a
         gaussian nudge of size `scale`. This is the entire 'learning'

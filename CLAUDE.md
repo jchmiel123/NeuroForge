@@ -8,13 +8,29 @@ ASCII-only output everywhere.
 - `neuroforge/core.py` - Layer, Network, Scaler. Phase 1 engine + the
   agent interface (activate/act/copy/mutate) used by evolution.
 - `neuroforge/evolve.py` - Environment interface, run_episode, Evolution
-  trainer (elitism + mutation + fresh blood). Phase 3 Q-learning will
-  reuse Environment.
-- `tests/test_core.py`, `tests/test_evolve.py` - run BOTH after any
-  change to core: `python tests/test_core.py && python tests/test_evolve.py`
+  trainer (elitism + mutation + fresh blood).
+- `neuroforge/qlearn.py` - QAgent (DQN-lite: replay buffer + target
+  network + epsilon-greedy). Uses Network.train_on() raw updates and the
+  same Environment interface as evolve.
+- `tests/` - test_core, test_evolve, test_qlearn. Run ALL THREE after
+  any change to core.
 - `demos/predict_process.py` - input->output prediction + what-if sweeps.
 - `demos/creature_world.py` - evolved food-hunter in an ASCII world
   (`--watch` animates, `--fast` for quick smoke runs).
+- `demos/grid_quest.py` - Q-learning key-then-door quest (`--fast` for
+  smoke runs).
+
+## RL tuning lessons (learned on grid_quest, 2026-07-03)
+
+- Sparse terminal rewards drown in function-approximation noise: the
+  Q-gap between right and wrong moves was ~0.05 against values of ~10,
+  and greedy play oscillated while training reward looked great. Fixes
+  that worked, in order of impact: (1) SIGN features in the observation
+  so near-target states are as loud as far ones, (2) potential-based
+  shaping toward the current objective (does not change the optimal
+  policy), (3) gamma 0.9 instead of 0.95 to widen adjacent-state gaps.
+- Evaluate policies GREEDY on unseen seeds. Training reward includes
+  exploration noise that hides broken greedy behavior.
 
 ## Design rules
 

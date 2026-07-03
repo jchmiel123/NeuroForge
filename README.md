@@ -51,14 +51,27 @@ best.act(sensor_values)              # -> action index
 best.save("brain.json")
 ```
 
+Learn from delayed rewards (the payoff comes many moves later):
+
+```python
+from neuroforge import QAgent
+
+agent = QAgent(observation_size=9, action_size=4, hidden=[24])
+agent.train(MyWorld(), episodes=400)   # same Environment interface
+agent.greedy(obs)                      # -> best action index
+agent.net.save("q.json")               # the policy is just a Network
+```
+
 ## Demos
 
 ```bash
 python demos/predict_process.py     # train on process data, ask what-if questions
 python demos/creature_world.py      # evolve a food-hunting creature (ASCII world)
 python demos/creature_world.py --watch   # animate the best creature live
+python demos/grid_quest.py          # Q-learning: get the key, THEN the door
 python tests/test_core.py           # XOR + regression + save/load self-tests
 python tests/test_evolve.py         # evolution + mutation + brain persistence
+python tests/test_qlearn.py         # corridor: reward propagates backwards
 ```
 
 ## Why it learns when from-scratch attempts don't
@@ -79,6 +92,7 @@ Three things silently kill hand-rolled networks, all handled here:
 - [x] Phase 1: supervised core (regression + classification), save/load, demos
 - [x] Phase 2: `Environment` interface + neuroevolution trainer + creature demo
       (evolved hunter eats 10/10 food on unseen maps; random baseline eats 0)
-- [ ] Phase 3: Q-learning decision agents (learn from delayed rewards)
+- [x] Phase 3: Q-learning decision agents (DQN-lite: replay buffer + target
+      network); key-then-door quest solved 100% on unseen maps (untrained: 2%)
 - [ ] Phase 4: NumPy fast path, QueueForge `neural_train` offload,
       network visualizer (port from PixelForge)
