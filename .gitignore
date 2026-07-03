@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+demos/process_model.json
+tests/_tmp_model.json
