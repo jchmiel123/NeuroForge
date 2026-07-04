@@ -288,6 +288,51 @@ class SlottoEnv(Environment):
 
 
 # ==========================================================================
+# Batch trainer
+#
+# Online DQN is sample-inefficient on this bandit-shaped task (bet size
+# does not move the luck chain), the lesson from web/ai.js + simulate.js.
+# The converging recipe, mirrored here: collect transitions under a
+# UNIFORM-random betting policy (so every (state, bet) region is sampled),
+# then run shuffled epochs of supervised train_on with the Q-target = the
+# plain reward (gamma 0). This is exactly how web/simulate.js builds the
+# shipped pip-brain.json.
+# ==========================================================================
+
+def batch_train(spins: int = 200000, epochs: int = 6, hidden=None,
+                seed: int = 7, verbose: bool = True) -> Network:
+    """Train a fresh bet-sizing Q-net on Slotto and return it.
+
+    Returns a NeuroForge Network you can save_brain() into the game.
+    """
+    env = SlottoEnv(seed=seed)
+    obs = env.reset()
+    data = []  # (obs, action, reward)
+    rng = random.Random(seed + 1)
+    for i in range(spins):
+        a = rng.randrange(3)
+        nxt, reward, done = env.step(a)
+        data.append((obs, a, reward))
+        obs = env.reset() if done else nxt
+    if verbose:
+        print(f"[batch] collected {len(data)} transitions")
+
+    net = Network(SlottoEnv.observation_size, hidden or [32],
+                  SlottoEnv.action_size, task="regression", activation="tanh")
+    net.in_scaler = net.out_scaler = None
+    for e in range(epochs):
+        lr = 0.01 * (0.65 ** e)
+        rng.shuffle(data)
+        for obs_i, a, reward in data:
+            target = list(net.activate(obs_i))
+            target[a] = reward         # gamma 0: target IS the reward
+            net.train_on(obs_i, target, lr=lr)
+        if verbose:
+            print(f"[batch] epoch {e + 1}/{epochs} done (lr {lr:.4f})")
+    return net
+
+
+# ==========================================================================
 # Self-test
 # ==========================================================================
 
