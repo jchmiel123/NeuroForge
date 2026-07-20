@@ -12,8 +12,12 @@ ASCII-only output everywhere.
 - `neuroforge/qlearn.py` - QAgent (DQN-lite: replay buffer + target
   network + epsilon-greedy). Uses Network.train_on() raw updates and the
   same Environment interface as evolve.
-- `tests/` - test_core, test_evolve, test_qlearn. Run ALL THREE after
-  any change to core.
+- `neuroforge/recurrent.py` - RNN (Phase 4): Elman recurrent net with
+  memory, trained by BPTT. Sequences of timestep vectors; regression or
+  classification per step; step()/generate() for streaming + text; JSON
+  save/load. Numpy-free, own tiny matvec helpers.
+- `tests/` - test_core, test_evolve, test_qlearn, test_recurrent. Run ALL
+  FOUR after any change to core (recurrent imports Scaler+softmax from it).
 - `demos/predict_process.py` - input->output prediction + what-if sweeps.
 - `demos/creature_world.py` - evolved food-hunter in an ASCII world
   (`--watch` animates, `--fast` for quick smoke runs).
@@ -31,6 +35,22 @@ ASCII-only output everywhere.
   policy), (3) gamma 0.9 instead of 0.95 to widen adjacent-state gaps.
 - Evaluate policies GREEDY on unseen seeds. Training reward includes
   exploration noise that hides broken greedy behavior.
+
+## RNN / BPTT lessons (learned building recurrent.py, 2026-07-04)
+
+- Global gradient-NORM clipping (GRAD_NORM_MAX, rescale the whole gradient
+  when its L2 norm exceeds the budget) is what makes BPTT trainable with
+  momentum + a real lr. Per-element value clipping alone is not enough and
+  distorts direction; without the norm clip, momentum 0.9 + lr 0.02
+  exploded loss to ~1e165 within one epoch. This is THE RNN fix.
+- Init W_hh small (scale sqrt(1/hidden)) so the recurrent loop does not
+  amplify signals/gradients across timesteps. W_xh uses He on input fan-in.
+- Cold-start vs warm-state: generation from a zero hidden state lands the
+  net in a context it saw only at char 0 of the corpus, so the first step
+  or two look wrong then re-sync. PRIME generate() with real context (a
+  warm seed) for clean output - it is not a training bug.
+- Delayed-echo (target[t] = input[t-1]) is the canary test: it is
+  impossible without memory, so if it converges, recurrence genuinely works.
 
 ## Design rules
 

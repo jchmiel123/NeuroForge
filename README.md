@@ -62,6 +62,26 @@ agent.greedy(obs)                      # -> best action index
 agent.net.save("q.json")               # the policy is just a Network
 ```
 
+Give a network MEMORY for sequences - time series, text, sensor streams
+(anything where order and history matter):
+
+```python
+from neuroforge import RNN
+
+# Each "sequence" is a list of timestep vectors; targets align per step.
+rnn = RNN(inputs=1, hidden=32, outputs=1, task="regression")
+rnn.fit(sequences, targets, epochs=300)     # BPTT under the hood
+rnn.predict_sequence(seq)                    # -> one output per timestep
+
+rnn.reset_state()                            # streaming inference:
+rnn.step(x)                                  # memory persists across calls
+
+# Char-level text: classification over a vocabulary, then roll it forward.
+rnn = RNN(inputs=V, hidden=64, outputs=V, task="classification", classes=chars)
+rnn.fit([seq], [next_chars])
+rnn.generate(seed_chars, n=100, temperature=0.6)   # -> generated tokens
+```
+
 ## Demos
 
 ```bash
@@ -69,9 +89,11 @@ python demos/predict_process.py     # train on process data, ask what-if questio
 python demos/creature_world.py      # evolve a food-hunting creature (ASCII world)
 python demos/creature_world.py --watch   # animate the best creature live
 python demos/grid_quest.py          # Q-learning: get the key, THEN the door
+python demos/sequence_predict.py    # RNN: generate text + predict a sine wave
 python tests/test_core.py           # XOR + regression + save/load self-tests
 python tests/test_evolve.py         # evolution + mutation + brain persistence
 python tests/test_qlearn.py         # corridor: reward propagates backwards
+python tests/test_recurrent.py      # delayed-echo memory proof + generation
 ```
 
 ## Why it learns when from-scratch attempts don't
@@ -94,5 +116,8 @@ Three things silently kill hand-rolled networks, all handled here:
       (evolved hunter eats 10/10 food on unseen maps; random baseline eats 0)
 - [x] Phase 3: Q-learning decision agents (DQN-lite: replay buffer + target
       network); key-then-door quest solved 100% on unseen maps (untrained: 2%)
-- [ ] Phase 4: NumPy fast path, QueueForge `neural_train` offload,
-      network visualizer (port from PixelForge)
+- [x] Phase 4: recurrence - `RNN` with memory, trained by BPTT with global
+      gradient-norm clipping; delayed-echo memory test + char generation +
+      sine-wave prediction. Sequences, streaming `step()`, `generate()`.
+- [ ] Phase 5: NumPy fast path, QueueForge `neural_train` offload, gated
+      recurrent unit (GRU) for longer memory, network visualizer
