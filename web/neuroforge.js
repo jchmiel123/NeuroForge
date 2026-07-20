@@ -39,6 +39,23 @@ const NF = (() => {
 
   function copyBrain(b) { return JSON.parse(JSON.stringify(b)); }
 
+  /* Mutated copy, mirroring core.py Network.mutate(): each weight/bias has
+     `rate` chance of a gaussian nudge of size `scale`. This is the entire
+     'learning' mechanism of neuroevolution - no gradients, no calculus. */
+  function mutateBrain(brain, rate, scale) {
+    rate = rate ?? 0.1;
+    scale = scale ?? 0.3;
+    const child = copyBrain(brain);
+    for (const L of child) {
+      for (const row of L.w)
+        for (let j = 0; j < row.length; j++)
+          if (Math.random() < rate) row[j] += gauss() * scale;
+      for (let i = 0; i < L.b.length; i++)
+        if (Math.random() < rate) L.b[i] += gauss() * scale;
+    }
+    return child;
+  }
+
   function fromNetworkJSON(data) {
     return data.layers.map(l => ({
       w: l.weights, b: l.biases, a: l.activation,
@@ -141,6 +158,6 @@ const NF = (() => {
     }
   }
 
-  return { randomBrain, copyBrain, fromNetworkJSON, forwardAll, activate, act, argmax, trainOn, QAgent };
+  return { randomBrain, copyBrain, mutateBrain, fromNetworkJSON, forwardAll, activate, act, argmax, trainOn, QAgent };
 })();
 if (typeof module !== "undefined") module.exports = NF;

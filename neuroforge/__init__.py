@@ -11,6 +11,6 @@ from .evolve import Environment, Evolution, run_episode
 from .qlearn import QAgent
 from .recurrent import RNN
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __all__ = ["Network", "Layer", "Scaler", "softmax",
            "Environment", "Evolution", "run_episode", "QAgent", "RNN"]
